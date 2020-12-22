@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!--
+    This html document illustrates how to build a document that contains
+         simple 3D image created using drawElements()
+     All the text that begins with "HTML StartUp" is provided to help with
+     debugging.
+     David John
+     September 2020
+     October 2020
+-->
+
+<style>
+    .button{
+        border: none;
+        color: black;
+        padding: 15px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+    }
+
+    .rbutton{background-color: #005500 ;}
+    .gbutton{background-color: #0000FF ;}
+    .bbutton{background-color: slateblue;}
+    .controlbutton{background-color : red;}
+</style>
+
+
+Team MineGraft: Frank Fang, Robin Zhang, Eva Wu <br>
+CSC363 <br>
+Minecraft Steve <br>
+ <br>
+11/22/2020 <br>
+<br>
+
+
+
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+    // VERTEX SHADER
+    // This is called and applied to every vertex. The vertex
+    // in this shader has two "attributes", a position (vPosition),
+    // a color (vColor),
+    attribute vec4 vPosition;
+    attribute vec4 vColor;
+    attribute vec4 vNormal;
+    attribute float vType;
+
+    // uniforms for angle of rotation (theta), model view (modelViewMatrix),
+    // and perspective projection (projectionMatrix)
+    //uniform float theta;
+    //uniform float beta;
+    //uniform float gama;
+    //uniform float len;
+    //uniform float deltatheta;
+    uniform float lighting; // boolean whether light on/off
+    uniform float xx;   // Steve x-axis loc
+    uniform float zz;   // z-axis loc
+    uniform float walk; // boolean whether walk or not
+    uniform float alpha;    // control the speed of walking behavior
+    uniform float dir;  // direction Steve facing
+
+    uniform mat4 modelViewMatrix;
+    uniform mat4 projectionMatrix;
+
+    // boring varying
+    varying vec4 fColor;
+
+
+    void
+    main()
+    {
+
+    // light's contribution independent of the material
+    //vec4 ambientProduct = vec4(153.0/255.0, 51.0/255.0, 0.75, 1.0);
+    //vec4 diffuseProduct = vec4(0.0, 0.3, 0.1, 1.0);
+    //vec4 specularProduct = vec4(0.9, 0.0, 0.03, 1.0);
+
+
+    float delta;    // leg/arm pivot angle
+    float pi = 3.141592654;
+    float shininess = 300.0;
+    float shininess2 = 50.0;
+    vec3 light = vec3(0.75, -1.0, 0.8);
+    vec3 light2 = vec3(12.0, 5.0, -2.0);
+    vec4 ambientProduct = vec4(250.0/255.0*vColor[0], 250.0/255.0*vColor[1], 250.0/255.0*vColor[2], 1.0*vColor[3]);
+    vec4 diffuseProduct = vec4(90.0/255.0*vColor[0], 50.0/255.0*vColor[1], 100.0/255.0*vColor[2], 1.0*vColor[3]);
+    vec4 specularProduct = vec4(102.0/255.0*vColor[0], 1.0*vColor[1], 102.0/255.0*vColor[2], 1.0*vColor[3]);
+    vec4 diffuseProduct2 = vec4(40.0/255.0*vColor[0], 40.0/255.0*vColor[1], 40.0/255.0*vColor[2], 1.0*vColor[3]);
+    vec4 specularProduct2 = vec4(255.0/255.0*vColor[0], 80.0/255.0*vColor[1], 80.0/255.0*vColor[2], 1.0*vColor[3]);
+
+    // initial CMT
+    mat4 CMT = mat4( 1.0, 0.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0, 0.0,
+                    0.0, 0.0, 1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0);
+    if (abs(vType-10.0)< 0.1) { // transfer pickaxe to right hand
+    // current matrix transform of pickaxe
+    CMT = mat4(1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        -0.65, 1.4, 0.5, 1.0)*
+                  mat4( cos(1.5 * pi), 0.0, -sin(1.5 * pi), 0.0,
+                         0.0,        1.0, 0.0,        0.0,
+                         sin(1.5 * pi),0.0, cos(1.5 * pi), 0.0,
+                         0.0,        0.0, 0.0,        1.0)*
+                  mat4( cos(0.25 * pi), -sin(0.25 * pi), 0.0,  0.0,
+                         sin(0.25 * pi), cos(0.25* pi), 0.0, 0.0,
+                         0.0,      0.0,      1.0,     0.0  ,
+                         0.0,        0.0, 0.0,        1.0)* CMT;
+    }
+
+    if (abs(walk-1.0) < 0.1){   // when Steve is walking
+        delta = 0.25 * pi * sin(alpha); // leg/arm pivot angle
+        if ( abs(vType-2.0) < 0.1) {    // right leg type
+            CMT = mat4(1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        0.0, 1.2 - 1.2*cos(delta), 1.2*sin(delta), 1.0)*
+                  mat4( 1.0,      0.0,      0.0,     0.0  ,
+                         0.0,  cos(delta), -sin(delta), 0.0,
+                         0.0, sin(delta), cos(delta), 0.0,
+                         0.0,        0.0, 0.0,        1.0)*
+                  CMT;
+        }
+        else if ( abs(vType-3.0) < 0.1) {   // left leg type
+            delta = -delta;
+            CMT = mat4(1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        0.0, 1.2 - 1.2*cos(delta), 1.2*sin(delta), 1.0)*
+                  mat4( 1.0,      0.0,      0.0,     0.0  ,
+                         0.0,  cos(delta), -sin(delta), 0.0,
+                         0.0, sin(delta), cos(delta), 0.0,
+                         0.0,        0.0, 0.0,        1.0)*
+                  CMT;
+        }
+        else if (abs(vType - 5.0) < 0.1 ){  // left arm type
+            CMT = mat4(1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        0.0, 2.4 - 2.4*cos(delta), 2.4*sin(delta), 1.0)*
+                  mat4( 1.0,      0.0,      0.0,     0.0  ,
+                         0.0,  cos(delta), -sin(delta), 0.0,
+                         0.0, sin(delta), cos(delta), 0.0,
+                         0.0,        0.0, 0.0,        1.0)*
+                  CMT;
+        }
+        else if (abs(vType - 4.0) < 0.1 ||abs(vType - 10.0) < 0.1){ // right arm type, pickaxe type
+            delta = -delta;
+            CMT = mat4(1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        0.0, 2.4 - 2.4*cos(delta), 2.4*sin(delta), 1.0)*
+                  mat4( 1.0,      0.0,      0.0,     0.0  ,
+                         0.0,  cos(delta), -sin(delta), 0.0,
+                         0.0, sin(delta), cos(delta), 0.0,
+                         0.0,        0.0, 0.0,        1.0)*
+                  CMT;
+        }
+        CMT = CMT;
+    }
+
+    if (vType > 0.5) {  // types for moving objects
+    // current matrix transform of all objects except walls
+    CMT = mat4(1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        xx, 0.0, zz, 1.0)*
+                  mat4( cos(dir), 0.0, -sin(dir), 0.0,
+                         0.0,        1.0, 0.0,        0.0,
+                         sin(dir),0.0, cos(dir), 0.0,
+                         0.0,        0.0, 0.0,        1.0) *
+                  CMT;
+    }
+    if (abs(vType+2.0)<0.1){    // torch type
+        CMT = mat4(1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        5.9, 3.4, -2.0, 1.0)*
+              mat4( cos(-0.2 * pi), -sin(-0.2 * pi), 0.0,  0.0,
+                         sin(-0.2 * pi), cos(-0.2* pi), 0.0, 0.0,
+                         0.0,      0.0,      1.0,     0.0  ,
+                         0.0,        0.0, 0.0,        1.0)*
+
+             mat4( cos(0.5* pi), 0.0, -sin(0.5* pi), 0.0,
+                         0.0,        1.0, 0.0,        0.0,
+                         sin(0.5* pi),0.0, cos(0.5* pi), 0.0,
+                         0.0,        0.0, 0.0,        1.0) *
+            CMT;
+    }
+    if (abs(vType+3.0)<0.1){    // torch type
+        CMT = mat4(1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        -6.0, 3.5, -2.0, 1.0)*
+               mat4( cos(0.2 * pi), -sin(0.2 * pi), 0.0,  0.0,
+                         sin(0.2 *pi), cos(0.2* pi), 0.0, 0.0,
+                         0.0,      0.0,      1.0,     0.0  ,
+                         0.0,        0.0, 0.0,        1.0)*
+
+              mat4( cos(0.5* pi), 0.0, -sin(0.5* pi), 0.0,
+                         0.0,        1.0, 0.0,        0.0,
+                         sin(0.5* pi),0.0, cos(0.5* pi), 0.0,
+                         0.0,        0.0, 0.0,        1.0) *
+
+                         CMT;
+    }
+    if (abs(vType+1.0)<0.1){    // torch type
+        CMT = mat4(1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        -3.0, 3.5, -8.0, 1.0)*
+               mat4(1.0,      0.0,      0.0,     0.0  ,
+                        0.0,  cos(-0.2 * pi), -sin(-0.2 * pi), 0.0,
+                        0.0,  sin(-0.2 * pi), cos(-0.2* pi), 0.0,
+                         0.0,        0.0, 0.0,        1.0)*
+               mat4(1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        0.0, 0.0, 0.0, 1.0)*
+
+              CMT;
+    }
+    mat4 MVCMT = modelViewMatrix*CMT;
+
+    // Apply Phong
+
+    vec3 pos = -(MVCMT*vPosition).xyz;
+    vec3 L = normalize(light-pos);
+    vec3 L2 = normalize(light2-pos);
+
+    vec3 E = normalize(-pos);
+    vec3 H = normalize(L+E);
+    vec3 H2 = normalize(L2+E);
+
+    vec3 N = normalize((MVCMT*vNormal).xyz);
+
+    vec4 ambient = ambientProduct;
+
+    float Kd = max(dot(L,N), 0.0);
+    vec4 diffuse = Kd*diffuseProduct;
+    float Kd2 = max(dot(L2,N), 0.0);
+    vec4 diffuse2 = Kd2*diffuseProduct2;
+
+    float Ks = pow(max(dot(N, H), 0.0), shininess);
+    vec4 specular = Ks*specularProduct;
+    float Ks2 = pow(max(dot(N, H2), 0.0), shininess2);
+    vec4 specular2 = Ks2*specularProduct2;
+
+    if (dot(L,N) < 0.0){
+        specular = vec4(0.0,0.0,0.0,1.0);
+        }
+
+    if (dot(L2,N) < 0.0){
+        specular = vec4(0.0,0.0,0.0,1.0);
+        }
+
+    //fColor = ambientProduct + diffuseProduct + specularProduct;
+    if (abs(lighting-1.0) < 0.1){
+    fColor =
+    ambient +
+    diffuse +
+    specular +
+    diffuse2 +
+    specular2;
+    }
+    else{
+    fColor =
+    //ambient+
+    //diffuse2+
+    diffuse;
+    }
+    fColor.a = 1.0;
+
+
+     gl_Position =
+                    projectionMatrix*
+                    MVCMT*
+                    vPosition;
+
+    }
+</script>
+
+
+
+
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+// FRAGMENT SHADER
+// This is applied to every vertex
+
+// set floating point precision to be "medium"
+precision mediump float;
+
+// varying fColor (passed from vertex shader) is
+// assigned to gl_FragColor.
+varying vec4 fColor;
+void
+main()
+{
+    gl_FragColor = fColor;
+}
+</script>
+
+
+
+<script type="text/javascript" src="../Common/webgl-utils.js"></script>
+<script type="text/javascript" src="../Common/initShaders.js"></script>
+<script type="text/javascript" src="../Common/MV.js"></script>
+<script type="text/javascript" src="Driver.js"></script>
+
+
+<br>
+<br>
+
+
+<Br>
+
+
+<br>
+<span style="padding-left:95px"></span>
+<button class = "button controlbutton" id="BackButton" > Back </button>
+<br>
+<button class = "button controlbutton" id="LeftButton" > Left </button>
+<button class = "button bbutton" id="bButton" > light </button>
+<button class = "button controlbutton" id="RightButton" > Right </button>
+<br>
+<span style="padding-left:95px"></span>
+<button class = "button controlbutton" id="FrontButton" > Front </button>
+<br>
+<! --
+create a html5 canvas, associated with "gl-canvas" with
+width and height 512 pixels
+-->
+<canvas id="gl-canvas" width="1024" height="1024">
+    Oops ... your browser doesn't support the HTML5 canvas element
+</canvas>
+<br>
+
+
+</body>
+
+
+</html>
